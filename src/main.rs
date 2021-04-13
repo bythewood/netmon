@@ -45,7 +45,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let diff = timestamp - heartbeat;
 
         if diff > 60 {
-            println!("Beast heartbeat is behind by {} seconds. Assuming death and ending process.", diff);
+            println!("Heartbeat is behind by {} seconds. Assuming death and ending process.", diff);
             std::process::exit(1);
         }
 
@@ -66,7 +66,7 @@ async fn heartbeat() -> Result<(), Box<dyn std::error::Error>> {
         redis::cmd("setnx").arg("reset").arg(true).query_async(&mut rc).await?;
         let reset: bool = redis::cmd("get").arg("reset").query_async(&mut rc).await?;
         if reset {
-            println!("Beast database reset invoked.");
+            println!("Database reset invoked.");
             redis::cmd("flushdb").query_async(&mut rc).await?;
             redis::cmd("set").arg("reset").arg(false).query_async(&mut rc).await?;
             redis::cmd("acl").arg("load").query_async(&mut rc).await?;
@@ -76,7 +76,7 @@ async fn heartbeat() -> Result<(), Box<dyn std::error::Error>> {
         redis::cmd("setnx").arg("audit").arg(true).query_async(&mut rc).await?;
         let audit: bool = redis::cmd("get").arg("audit").query_async(&mut rc).await?;
         if audit {
-            println!("Beast client audit invoked.");
+            println!("Client audit invoked.");
             redis::cmd("set").arg("audit").arg(false).query_async(&mut rc).await?;
             // do audit of dead client records and acls
         }
