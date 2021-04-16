@@ -1,4 +1,4 @@
-name: Stable Branch Testing
+name: Stable Branch Test
 
 on:
   push:
