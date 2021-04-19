@@ -1,8 +1,9 @@
-name: Rust
+name: rust
 
 on:
   pull_request:
-    branches: [ stable ]
+    branches:
+      - stable
 
 env:
   CARGO_TERM_COLOR: always
