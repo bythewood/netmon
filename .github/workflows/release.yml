@@ -1,21 +1,27 @@
-name: upload-binaries
-
+name: Release
 on:
-  release:
-    types:
-      - created
-
+  push:
+    branches:
+      - stable
 jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2 
+      - uses: GoogleCloudPlatform/release-please-action@v2
+        id: release
+        with:
+          package-name: NetMon
+          release-type: rust
   linux-x86_64:
+    if: jobs.release.steps.release.outputs.release_created
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-
       - name: Build binaries
         run: |
           rustup update
           cargo build --release
-
       - name: Package binaries
         run: |
           cd target/release
@@ -25,55 +31,50 @@ jobs:
           chmod +x netmon-client
           tar -c netmon-server | gzip > netmon-server.tar.gz
           tar -c netmon-client | gzip > netmon-client.tar.gz
-
       - uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          asset_name: netmon-server-${{ github.event.release.tag-name }}-linux-x86_64.tar.gz
+          asset_name: netmon-server-${{ jobs.release.steps.release.outputs.tag-name }}-linux-x86_64.tar.gz
           asset_content_type: application/gzip
           asset_path: target/release/netmon-server.tar.gz
-          upload_url: ${{ github.event.release.upload_url }}
-
+          upload_url: ${{ jobs.release.steps.release.outputs.upload_url }}
       - uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          asset_name: netmon-client-${{ github.event.release.tag-name }}-linux-x86_64.tar.gz
+          asset_name: netmon-client-${{ jobs.release.steps.release.outputs.tag-name }}-linux-x86_64.tar.gz
           asset_content_type: application/gzip
           asset_path: target/release/netmon-client.tar.gz
-          upload_url: ${{ github.event.release.upload_url }}
-
+          upload_url: ${{ jobs.release.steps.release.outputs.upload_url }}
   windows-x86_64:
+    if: jobs.release.steps.release.outputs.release_created
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v1
-
       - name: Build binaries
         run: |
           rustup update
           cargo build --release
-
       - name: Package binaries
         run: |
           cd target/release
           7z a netmon-server.7z netmon-server.exe
           7z a netmon-client.7z netmon-client.exe
-      
       - uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          asset_name: netmon-server-${{ github.event.release.tag-name }}-windows-x86_64.7z
+          asset_name: netmon-server-${{ jobs.release.steps.release.outputs.tag-name }}-windows-x86_64.7z
           asset_content_type: application/x-7z-compressed
           asset_path: target/release/netmon-server.7z
-          upload_url: ${{ github.event.release.upload_url }}
-
+          upload_url: ${{ jobs.release.steps.release.outputs.upload_url }}
       - uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          asset_name: netmon-client-${{ github.event.release.tag-name }}-windows-x86_64.7z
+          asset_name: netmon-client-${{ jobs.release.steps.release.outputs.tag-name }}-windows-x86_64.7z
           asset_content_type: application/x-7z-compressed
           asset_path: target/release/netmon-client.7z
-          upload_url: ${{ github.event.release.upload_url }}
+          upload_url: ${{ jobs.release.steps.release.outputs.upload_url }}
+
