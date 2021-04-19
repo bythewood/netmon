@@ -1,5 +1,12 @@
 # Changelog
 
+### [0.0.4](https://www.github.com/bythewood/netmon/compare/v0.0.3...v0.0.4) (2021-04-19)
+
+
+### Bug Fixes
+
+* upload workflow ([64f1736](https://www.github.com/bythewood/netmon/commit/64f173642fac435f029361a126c2840d2d25a1f4))
+
 ### [0.0.3](https://www.github.com/bythewood/netmon/compare/v0.0.2...v0.0.3) (2021-04-19)
 
 
