@@ -1,5 +1,12 @@
 # Changelog
 
+### [0.0.2](https://www.github.com/bythewood/netmon/compare/v0.0.1...v0.0.2) (2021-04-19)
+
+
+### Bug Fixes
+
+* workflows ([262fb07](https://www.github.com/bythewood/netmon/commit/262fb0745271ed56d9b0462830f0d755d8410aa9))
+
 ### 0.0.1 (2021-04-19)
 
 
