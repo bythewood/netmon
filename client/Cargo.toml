@@ -1,0 +1,13 @@
+[package]
+name = "netmon-client"
+version = "0.0.1"
+authors = ["Sibastian Bythewood <sibastian.bythewood@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+tokio = { version = "1.0.1", features = ["full"] }
+redis = { version = "0.20.0", features = ["tokio-comp", "tokio-native-tls-comp"] }
+chrono = { version = "0.4.19" }
+toml = { version = "0.5.8" }
+serde_derive = { version = "1.0.125" }
+serde = { version = "1.0.125" }

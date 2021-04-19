@@ -18,19 +18,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 
 [[package]]
-name = "beast"
-version = "0.0.1"
-dependencies = [
- "chrono",
- "lazy_static",
- "redis",
- "serde",
- "serde_derive",
- "tokio",
- "toml",
-]
-
-[[package]]
 name = "bitflags"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -300,6 +287,31 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "tempfile",
+]
+
+[[package]]
+name = "netmon-client"
+version = "0.0.1"
+dependencies = [
+ "chrono",
+ "redis",
+ "serde",
+ "serde_derive",
+ "tokio",
+ "toml",
+]
+
+[[package]]
+name = "netmon-server"
+version = "0.0.1"
+dependencies = [
+ "chrono",
+ "lazy_static",
+ "redis",
+ "serde",
+ "serde_derive",
+ "tokio",
+ "toml",
 ]
 
 [[package]]

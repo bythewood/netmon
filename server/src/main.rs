@@ -29,14 +29,11 @@ lazy_static::lazy_static!{
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut rc = REDIS_CLIENT.get_tokio_connection().await?;
-
     redis::cmd("set").arg("heartbeat").arg(chrono::Utc::now().timestamp()).query_async(&mut rc).await?;
 
-    tokio::task::spawn(async{ if let Err(e) = heartbeat().await {println!("heartbeat() -> {}", e)} });
-    tokio::task::spawn(async{ if let Err(e) = client_handler().await {println!("client_handler() -> {}", e)} });
+    tokio::task::spawn(async{ if let Err(e) = heartbeat().await {panic!("heartbeat() -> {}", e)} });
+    tokio::task::spawn(async{ if let Err(e) = client_handler().await {panic!("client_handler() -> {}", e)} });
     tokio::task::yield_now().await;
-
-    tokio::task::spawn(async{ if let Err(e) = test_client().await {println!("test_client() -> {}", e)} });
 
     loop {
         let heartbeat: i64 = redis::cmd("get").arg("heartbeat").query_async(&mut rc).await.unwrap_or(0);
@@ -45,7 +42,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let diff = timestamp - heartbeat;
 
         if diff > 60 {
-            println!("Heartbeat is behind by {} seconds. Assuming death and ending process.", diff);
+            eprintln!("Heartbeat is behind by {} seconds. Assuming death and ending process.", diff);
             std::process::exit(1);
         }
 
@@ -57,17 +54,18 @@ async fn heartbeat() -> Result<(), Box<dyn std::error::Error>> {
     let mut rc = REDIS_CLIENT.get_tokio_connection().await?;
     loop {
         redis::cmd("set").arg("heartbeat").arg(chrono::Utc::now().timestamp()).query_async(&mut rc).await?;
-        let mut msg = Msg::default();
-        msg.stamp = chrono::Utc::now().timestamp();
-        msg.from = "server".to_owned();
-        msg.event = "heartbeat".to_owned();
+        let msg = Msg {
+            stamp: chrono::Utc::now().timestamp(),
+            from: "server".to_owned(),
+            event: "heartbeat".to_owned(),
+            .. Msg::default()
+        };
         redis::cmd("publish").arg("clients:msg:all").arg(toml::to_string(&msg)?).query_async(&mut rc).await?;
 
         redis::cmd("setnx").arg("reset").arg(true).query_async(&mut rc).await?;
         let reset: bool = redis::cmd("get").arg("reset").query_async(&mut rc).await?;
         if reset {
             println!("Database reset invoked.");
-            redis::cmd("flushdb").query_async(&mut rc).await?;
             redis::cmd("set").arg("reset").arg(false).query_async(&mut rc).await?;
             redis::cmd("acl").arg("load").query_async(&mut rc).await?;
             redis::cmd("set").arg("audit").arg(false).query_async(&mut rc).await?;
@@ -117,63 +115,4 @@ async fn client_handler() -> Result<(), Box<dyn std::error::Error>> {
             .query_async(&mut rc).await?;
         }
     }
-}
-
-async fn test_client() -> Result<(), Box<dyn std::error::Error>> {
-    let rcl: redis::Client = redis::Client::open(redis::ConnectionInfo{
-        addr: Box::new(redis::ConnectionAddr::TcpTls{
-            host: "niflheimgames.com".to_owned(),
-            port: 10101,
-            insecure: false,
-        }),
-        db: 0,
-        username: Option::Some("public".to_owned()),
-        passwd: Option::Some("public".to_owned()),
-    })?;
-    let mut rc = rcl.get_connection()?;
-
-    let u: String = redis::cmd("acl").arg("genpass").arg("1024").query(&mut rc)?;
-    let p: String = redis::cmd("acl").arg("genpass").arg("1024").query(&mut rc)?;
-    let mut msg = Msg::default();
-    msg.from = u.to_owned();
-    msg.action = "auth_request".to_owned();
-    msg.data = p.to_owned();
-    let msg_string: String = toml::to_string(&msg)?;
-    loop {
-        let seen_by: u64 = redis::cmd("publish").arg("clients:msg:connecting").arg(&msg_string).query(&mut rc)?;
-        if seen_by > 0 { break }
-        println!("test_client() -> request failed, no handlers on server, waiting 10s");
-        std::thread::sleep(std::time::Duration::from_secs(10));
-    }
-
-    println!("test_client() -> request sent, waiting for auth");
-
-    let mut auth_attempts: u8 = 0;
-    let has_auth: bool = loop {
-        std::thread::sleep(std::time::Duration::from_secs(1));
-        match redis::cmd("auth").arg(["client:", &u].concat()).arg(&p).query(&mut rc) {
-            Ok(o) => break o,
-            Err(_) => {
-                auth_attempts += 1;
-                if auth_attempts > 30 { break false };
-            },
-        };
-    };
-
-    if has_auth {
-        println!("test_client() -> auth granted, connection successful, listening for messages");
-        let mut sub = rc.as_pubsub();
-        sub.subscribe("clients:msg:all")?;
-        sub.subscribe(["clients:msg:", &u].concat())?;
-
-        loop {
-            let msg = sub.get_message()?;
-            let text: String = msg.get_payload()?;
-            println!("test_client() -> msg seen: {}", text);
-        }
-    } else {
-        println!("test_client() -> auth failed, timed out")
-    }
-    
-    Ok(())
 }
