@@ -1,4 +1,4 @@
 /target
 *.sh
+*.bat
 auth.toml
-log
