@@ -2,8 +2,7 @@ name: upload-binaries
 
 on:
   release:
-    types:
-      - published
+    types: [published]
 
 jobs:
   linux-x86_64:
