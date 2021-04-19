@@ -1,13 +1,24 @@
+name: Release Please
+
 on:
   push:
     branches:
       - stable
-name: release-please
+
 jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v2
+      - name: Test
+        run: cargo test --verbose
+      - name: Build Release
+        run: cargo build --release
       - uses: GoogleCloudPlatform/release-please-action@v2
         with:
           release-type: rust
-          package-name: release-please-action
+          package-name: NetMon
+          files: |
+            ./LICENSE
+            ./target/release/netmon-server
+            ./target/release/netmon-client
