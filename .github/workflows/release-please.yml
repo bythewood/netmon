@@ -15,3 +15,4 @@ jobs:
         with:
           package-name: NetMon
           release-type: rust
+          pre-release: true
