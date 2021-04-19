@@ -11,9 +11,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Test
-        run: cargo test --verbose
+        run: cargo test --verbose     
       - uses: GoogleCloudPlatform/release-please-action@v2
-      - name: Release
         with:
           package-name: NetMon
           release-type: rust
