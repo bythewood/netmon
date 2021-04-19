@@ -12,7 +12,7 @@ struct Msg {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let rcl: redis::Client = redis::Client::open(redis::ConnectionInfo{
         addr: Box::new(redis::ConnectionAddr::TcpTls{
-            host: std::env::var("NETMON_SERVER").unwrap_or("LOCALHOST".to_owned()),
+            host: std::env::var("NETMON_SERVER").unwrap(),
             port: 10101,
             insecure: false,
         }),
