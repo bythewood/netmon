@@ -31,8 +31,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut rc = REDIS_CLIENT.get_tokio_connection().await?;
     redis::cmd("set").arg("heartbeat").arg(chrono::Utc::now().timestamp()).query_async(&mut rc).await?;
 
-    tokio::task::spawn(async{ if let Err(e) = heartbeat().await {panic!("heartbeat() -> {}", e)} });
-    tokio::task::spawn(async{ if let Err(e) = client_handler().await {panic!("client_handler() -> {}", e)} });
+    tokio::task::spawn(async{ if let Err(e) = heartbeat().await {eprintln!("heartbeat() -> {}", e)} });
+    tokio::task::spawn(async{ if let Err(e) = msg_handler().await {eprintln!("msg_handler() -> {}", e)} });
     tokio::task::yield_now().await;
 
     loop {
@@ -69,26 +69,18 @@ async fn heartbeat() -> Result<(), Box<dyn std::error::Error>> {
             eprintln!("{} -> Database reset invoked.", chrono::Utc::now().timestamp());
             redis::cmd("flushall").query_async(&mut rc).await?;
             redis::cmd("set").arg("reset").arg(false).query_async(&mut rc).await?;
-            redis::cmd("acl").arg("load").query_async(&mut rc).await?;
-            redis::cmd("set").arg("audit").arg(false).query_async(&mut rc).await?;
-        }
-
-        redis::cmd("setnx").arg("audit").arg(true).query_async(&mut rc).await?;
-        let audit: bool = redis::cmd("get").arg("audit").query_async(&mut rc).await?;
-        if audit {
-            eprintln!("{} -> Client audit invoked.", chrono::Utc::now().timestamp());
-            redis::cmd("set").arg("audit").arg(false).query_async(&mut rc).await?;
-            // do audit of dead client records and acls
         }
 
         // heartbeat interval is purposefully arbitrary to avoid predictions
-        // heartbeat exists only to monitor handlers
+        // heartbeat exists only to monitor handlers and take actions
         let mut rng = rand::thread_rng();
         std::thread::sleep(std::time::Duration::from_secs(rand::Rng::gen_range(&mut rng, 10..20)));
+
+        //todo: check for responses from handlers & clients
     }
 }
 
-async fn client_handler() -> Result<(), Box<dyn std::error::Error>> {
+async fn msg_handler() -> Result<(), Box<dyn std::error::Error>> {
     let mut sub_rc = REDIS_CLIENT.get_connection()?;
     let mut sub = sub_rc.as_pubsub();
 
@@ -97,16 +89,17 @@ async fn client_handler() -> Result<(), Box<dyn std::error::Error>> {
 
     loop {
         let msg_string: String = sub.get_message()?.get_payload()?;
-        tokio::task::spawn(async{ if let Err(e) = msg_handler(msg_string).await {panic!("msg_handler() -> {}", e)} });
+        tokio::task::spawn(async{ if let Err(e) = _msg_handler(msg_string).await {panic!("msg_handler() -> {}", e)} });
     }
 }
 
-async fn msg_handler(msg_string: String) -> Result<(), Box<dyn std::error::Error>> {
+async fn _msg_handler(msg_string: String) -> Result<(), Box<dyn std::error::Error>> {
     let mut rc = REDIS_CLIENT.get_tokio_connection().await?;
     let msg: Msg = toml::from_str(&msg_string)?;
     if msg.action == "auth_request" {
         if msg.from.len() == 0 || msg.data.len() == 0 { return Ok(()) };
         redis::cmd("sadd").arg("clients").arg(&msg.from).query_async(&mut rc).await?;
+        redis::cmd("set").arg(["heartbeat:", &msg.from].concat()).arg(msg.stamp).query_async(&mut rc).await?;
         redis::cmd("acl")
             .arg("setuser")
             .arg(["client:", &msg.from].concat())
@@ -122,8 +115,13 @@ async fn msg_handler(msg_string: String) -> Result<(), Box<dyn std::error::Error
             .arg(["&clients:msg:", &msg.from].concat())
         .query_async(&mut rc).await?;
     }
-    if msg.event == "heartbeat" && msg.from == "server" {
-        
+    if msg.event == "heartbeat" {
+        if msg.from == "server" {
+            redis::cmd("set").arg("heartbeat:msg_handler").arg(chrono::Utc::now().timestamp()).query_async(&mut rc).await?;
+        } else {
+            redis::cmd("set").arg(["heartbeat:", &msg.from].concat()).arg(msg.stamp).query_async(&mut rc).await?;
+        }
     }
+    // todo: capture env_vars_os msg returns from clients
     Ok(())
 }
