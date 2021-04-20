@@ -67,8 +67,8 @@ async fn heartbeat() -> Result<(), Box<dyn std::error::Error>> {
         let reset: bool = redis::cmd("get").arg("reset").query_async(&mut rc).await?;
         if reset {
             eprintln!("{} -> Database reset invoked.", chrono::Utc::now().timestamp());
-            redis::cmd("set").arg("reset").arg(false).query_async(&mut rc).await?;
             redis::cmd("flushall").query_async(&mut rc).await?;
+            redis::cmd("set").arg("reset").arg(false).query_async(&mut rc).await?;
             redis::cmd("acl").arg("load").query_async(&mut rc).await?;
             redis::cmd("set").arg("audit").arg(false).query_async(&mut rc).await?;
         }
@@ -82,7 +82,7 @@ async fn heartbeat() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         // heartbeat interval is purposefully arbitrary to avoid predictions
-        // heartbeat exists only to monitor handlers and provide server status for clients
+        // heartbeat exists only to monitor handlers
         let mut rng = rand::thread_rng();
         std::thread::sleep(std::time::Duration::from_secs(rand::Rng::gen_range(&mut rng, 10..20)));
     }

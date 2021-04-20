@@ -48,23 +48,23 @@ fn client() -> Result<(), Box<dyn std::error::Error>> {
         .. Msg::default()
     };
     let msg_string: String = toml::to_string(&msg)?;
-    loop {
-        let seen_by: u64 = redis::cmd("publish").arg("clients:msg:connecting").arg(&msg_string).query(&mut rc)?;
-        if seen_by > 0 { break }
-        println!("main() -> request failed, no handlers on server, waiting 10s");
-        std::thread::sleep(std::time::Duration::from_secs(10));
-    }
-
-    println!("main() -> request sent, waiting for auth");
 
     let mut auth_attempts: u8 = 0;
+    while auth_attempts < 10 {
+        let seen_by: u64 = redis::cmd("publish").arg("clients:msg:connecting").arg(&msg_string).query(&mut rc)?;
+        if seen_by > 0 { break }
+        println!("main() -> request failed, no handlers on server");
+        auth_attempts += 1;
+        std::thread::sleep(std::time::Duration::from_secs(1));
+    }
+    println!("main() -> request sent, waiting for auth");
     let has_auth: bool = loop {
         std::thread::sleep(std::time::Duration::from_secs(1));
         match redis::cmd("auth").arg(["client:", &u].concat()).arg(&p).query(&mut rc) {
             Ok(o) => break o,
             Err(_) => {
                 auth_attempts += 1;
-                if auth_attempts > 30 { break false };
+                if auth_attempts > 10 { break false };
             },
         };
     };
