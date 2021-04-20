@@ -65,22 +65,22 @@ jobs:
       - name: Package binaries
         run: |
           cd target/release
-          7z a netmon-server.7z netmon-server.exe
-          7z a netmon-client.7z netmon-client.exe
+          7z a -tzip netmon-server.zip netmon-server.exe
+          7z a -tzip netmon-client.zip netmon-client.exe
       - uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          asset_name: netmon-server-${{ needs.release.outputs.tag_name }}-windows-x86_64.7z
-          asset_content_type: application/x-7z-compressed
-          asset_path: target/release/netmon-server.7z
+          asset_name: netmon-server-${{ needs.release.outputs.tag_name }}-windows-x86_64.zip
+          asset_content_type: application/zip
+          asset_path: target/release/netmon-server.zip
           upload_url: ${{ needs.release.outputs.upload_url }}
       - uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          asset_name: netmon-client-${{ needs.release.outputs.tag_name }}-windows-x86_64.7z
-          asset_content_type: application/x-7z-compressed
-          asset_path: target/release/netmon-client.7z
+          asset_name: netmon-client-${{ needs.release.outputs.tag_name }}-windows-x86_64.zip
+          asset_content_type: application/zip
+          asset_path: target/release/netmon-client.zip
           upload_url: ${{ needs.release.outputs.upload_url }}
 
