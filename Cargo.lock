@@ -300,6 +300,7 @@ version = "0.0.1"
 dependencies = [
  "chrono",
  "lazy_static",
+ "rand",
  "redis",
  "serde",
  "serde_derive",

@@ -61,12 +61,14 @@ async fn heartbeat() -> Result<(), Box<dyn std::error::Error>> {
             .. Msg::default()
         };
         redis::cmd("publish").arg("clients:msg:all").arg(toml::to_string(&msg)?).query_async(&mut rc).await?;
+        redis::cmd("publish").arg("handlers:msg:all").arg(toml::to_string(&msg)?).query_async(&mut rc).await?;
 
         redis::cmd("setnx").arg("reset").arg(true).query_async(&mut rc).await?;
         let reset: bool = redis::cmd("get").arg("reset").query_async(&mut rc).await?;
         if reset {
-            println!("Database reset invoked.");
+            eprintln!("{} -> Database reset invoked.", chrono::Utc::now().timestamp());
             redis::cmd("set").arg("reset").arg(false).query_async(&mut rc).await?;
+            redis::cmd("flushall").query_async(&mut rc).await?;
             redis::cmd("acl").arg("load").query_async(&mut rc).await?;
             redis::cmd("set").arg("audit").arg(false).query_async(&mut rc).await?;
         }
@@ -74,18 +76,19 @@ async fn heartbeat() -> Result<(), Box<dyn std::error::Error>> {
         redis::cmd("setnx").arg("audit").arg(true).query_async(&mut rc).await?;
         let audit: bool = redis::cmd("get").arg("audit").query_async(&mut rc).await?;
         if audit {
-            println!("Client audit invoked.");
+            eprintln!("{} -> Client audit invoked.", chrono::Utc::now().timestamp());
             redis::cmd("set").arg("audit").arg(false).query_async(&mut rc).await?;
             // do audit of dead client records and acls
         }
 
-        std::thread::sleep(std::time::Duration::from_secs(5));
+        // heartbeat interval is purposefully arbitrary to avoid predictions
+        // heartbeat exists only to monitor handlers and provide server status for clients
+        let mut rng = rand::thread_rng();
+        std::thread::sleep(std::time::Duration::from_secs(rand::Rng::gen_range(&mut rng, 10..20)));
     }
 }
 
 async fn client_handler() -> Result<(), Box<dyn std::error::Error>> {
-    let mut rc = REDIS_CLIENT.get_tokio_connection().await?;
-
     let mut sub_rc = REDIS_CLIENT.get_connection()?;
     let mut sub = sub_rc.as_pubsub();
 
@@ -94,25 +97,33 @@ async fn client_handler() -> Result<(), Box<dyn std::error::Error>> {
 
     loop {
         let msg_string: String = sub.get_message()?.get_payload()?;
-        let msg: Msg = toml::from_str(&msg_string)?;
-
-        if msg.action == "auth_request" {
-            if msg.from.len() == 0 || msg.data.len() == 0 { continue };
-            redis::cmd("sadd").arg("clients").arg(&msg.from).query_async(&mut rc).await?;
-            redis::cmd("acl")
-                .arg("setuser")
-                .arg(["client:", &msg.from].concat())
-                .arg("on")
-                .arg("sanitize-payload")
-                .arg([">", &msg.data].concat())
-                .arg("nocommands")
-                .arg(["+publish|clients:msg:", &msg.from].concat())
-                .arg(["+subscribe|clients:msg:", &msg.from].concat())
-                .arg("+subscribe|clients:msg:all")
-                .arg("resetchannels")
-                .arg("&clients:msg:all")
-                .arg(["&clients:msg:", &msg.from].concat())
-            .query_async(&mut rc).await?;
-        }
+        tokio::task::spawn(async{ if let Err(e) = msg_handler(msg_string).await {panic!("msg_handler() -> {}", e)} });
     }
+}
+
+async fn msg_handler(msg_string: String) -> Result<(), Box<dyn std::error::Error>> {
+    let mut rc = REDIS_CLIENT.get_tokio_connection().await?;
+    let msg: Msg = toml::from_str(&msg_string)?;
+    if msg.action == "auth_request" {
+        if msg.from.len() == 0 || msg.data.len() == 0 { return Ok(()) };
+        redis::cmd("sadd").arg("clients").arg(&msg.from).query_async(&mut rc).await?;
+        redis::cmd("acl")
+            .arg("setuser")
+            .arg(["client:", &msg.from].concat())
+            .arg("on")
+            .arg("sanitize-payload")
+            .arg([">", &msg.data].concat())
+            .arg("nocommands")
+            .arg(["+publish|clients:msg:", &msg.from].concat())
+            .arg(["+subscribe|clients:msg:", &msg.from].concat())
+            .arg("+subscribe|clients:msg:all")
+            .arg("resetchannels")
+            .arg("&clients:msg:all")
+            .arg(["&clients:msg:", &msg.from].concat())
+        .query_async(&mut rc).await?;
+    }
+    if msg.event == "heartbeat" && msg.from == "server" {
+        
+    }
+    Ok(())
 }

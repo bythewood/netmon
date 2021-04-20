@@ -12,3 +12,4 @@ lazy_static = { version = "1.4.0" }
 toml = { version = "0.5.8" }
 serde_derive = { version = "1.0.125" }
 serde = { version = "1.0.125" }
+rand = { version = "0.8.3" }

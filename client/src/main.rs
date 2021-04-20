@@ -10,6 +10,23 @@ struct Msg {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut attempts = 0;
+    while attempts < 10 {
+        match client() {
+            Ok(_) => break,
+            Err(e) => {
+                eprintln!("client() -> {}", e);
+                attempts += 1;
+                // todo: add an attempts reset after a certain amount of time passes
+                std::thread::sleep(std::time::Duration::from_secs(6));
+            }
+        }
+    }
+    eprintln!("main() -> client returned ok or attempts > 10");
+    Ok(())
+}
+
+fn client() -> Result<(), Box<dyn std::error::Error>> {
     let rcl: redis::Client = redis::Client::open(redis::ConnectionInfo{
         addr: Box::new(redis::ConnectionAddr::TcpTls{
             host: std::env::var("NETMON_SERVER").unwrap(),
@@ -59,13 +76,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         sub.subscribe(["clients:msg:", &u].concat())?;
 
         loop {
-            let msg = sub.get_message()?;
-            let text: String = msg.get_payload()?;
-            println!("main() -> msg seen: {}", text);
+            let msg_string: String = sub.get_message()?.get_payload()?;
+            tokio::task::spawn(async{ if let Err(e) = msg_handler(msg_string).await {eprintln!("msg_handler() -> {}", e)} });
         }
     } else {
-        println!("main() -> auth failed, timed out")
+        println!("main() -> auth failed, timed out");
     }
     
+    Ok(())
+}
+
+async fn msg_handler(msg_string: String) -> Result<(), Box<dyn std::error::Error>> {
+    println!("msg_handler -> {}", msg_string);
     Ok(())
 }
