@@ -14,8 +14,9 @@ jobs:
           package-name: NetMon
           release-type: rust
   linux-x86_64:
-    if: jobs.release.steps.release.outputs.release_created
     runs-on: ubuntu-latest
+    needs: release
+    if: needs.release.outputs.release_created
     steps:
       - uses: actions/checkout@v1
       - name: Build binaries
@@ -35,21 +36,22 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          asset_name: netmon-server-${{ jobs.release.steps.release.outputs.tag-name }}-linux-x86_64.tar.gz
+          asset_name: netmon-server-${{ needs.release.outputs.tag-name }}-linux-x86_64.tar.gz
           asset_content_type: application/gzip
           asset_path: target/release/netmon-server.tar.gz
-          upload_url: ${{ jobs.release.steps.release.outputs.upload_url }}
+          upload_url: ${{ needs.release.outputs.upload_url }}
       - uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          asset_name: netmon-client-${{ jobs.release.steps.release.outputs.tag-name }}-linux-x86_64.tar.gz
+          asset_name: netmon-client-${{ needs.release.outputs.tag-name }}-linux-x86_64.tar.gz
           asset_content_type: application/gzip
           asset_path: target/release/netmon-client.tar.gz
-          upload_url: ${{ jobs.release.steps.release.outputs.upload_url }}
+          upload_url: ${{ needs.release.outputs.upload_url }}
   windows-x86_64:
-    if: jobs.release.steps.release.outputs.release_created
     runs-on: windows-latest
+    needs: release
+    if: needs.release.outputs.release_created
     steps:
       - uses: actions/checkout@v1
       - name: Build binaries
@@ -65,16 +67,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          asset_name: netmon-server-${{ jobs.release.steps.release.outputs.tag-name }}-windows-x86_64.7z
+          asset_name: netmon-server-${{ needs.release.outputs.tag-name }}-windows-x86_64.7z
           asset_content_type: application/x-7z-compressed
           asset_path: target/release/netmon-server.7z
-          upload_url: ${{ jobs.release.steps.release.outputs.upload_url }}
+          upload_url: ${{ needs.release.outputs.upload_url }}
       - uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          asset_name: netmon-client-${{ jobs.release.steps.release.outputs.tag-name }}-windows-x86_64.7z
+          asset_name: netmon-client-${{ needs.release.outputs.tag-name }}-windows-x86_64.7z
           asset_content_type: application/x-7z-compressed
           asset_path: target/release/netmon-client.7z
-          upload_url: ${{ jobs.release.steps.release.outputs.upload_url }}
+          upload_url: ${{ needs.release.outputs.upload_url }}
 
