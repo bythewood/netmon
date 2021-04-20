@@ -1,5 +1,13 @@
 # Changelog
 
+### [0.0.5](https://www.github.com/bythewood/netmon/compare/v0.0.4...v0.0.5) (2021-04-20)
+
+
+### Bug Fixes
+
+* **attempting:** fix workflows ([4d09a37](https://www.github.com/bythewood/netmon/commit/4d09a37c0cecbb6e63bafcbd0b82a447cae6f696))
+* workflow rework ([97b1345](https://www.github.com/bythewood/netmon/commit/97b13452e3ff61b7b755d405e70cc02168770eaa))
+
 ### [0.0.4](https://www.github.com/bythewood/netmon/compare/v0.0.3...v0.0.4) (2021-04-19)
 
 
